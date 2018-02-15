@@ -1,0 +1,66 @@
+diff --git a/dhcp-4.3.5/server/dhcp.c b/dhcp-4.3.5/server/dhcp.c
+index 6e2cc73..2e6edfc 100644
+--- a/dhcp-4.3.5/server/dhcp.c
++++ b/dhcp-4.3.5/server/dhcp.c
+@@ -31,7 +31,7 @@
+ #include <limits.h>
+ #include <sys/time.h>
+ 
+-void dhcps_nats_publish(void);
++int dhcps_nats_publish(void);
+ static void maybe_return_agent_options(struct packet *packet,
+                                       struct option_state *options);
+ static int reuse_lease (struct packet* packet, struct lease* new_lease,
+@@ -435,10 +435,10 @@ void dhcpdiscover (packet, ms_nulltp)
+        if (when < lease -> ends)
+                when = lease -> ends;
+ 
+-    dhcps_nats_publish();
+-
++     if (dhcps_nats_publish() == 0) {
+        ack_lease (packet, lease, DHCPOFFER, when, msgbuf, ms_nulltp,
+                   (struct host_decl *)0);
++     }
+       out:
+        if (lease)
+                lease_dereference (&lease, MDL);
+diff --git a/dhcp-4.3.5/server/dhcp_nats.c b/dhcp-4.3.5/server/dhcp_nats.c
+index ae70d94..ae64843 100644
+--- a/dhcp-4.3.5/server/dhcp_nats.c
++++ b/dhcp-4.3.5/server/dhcp_nats.c
+@@ -95,7 +95,7 @@ void dhcps_nats_connect(int argc, char **argv)
+ #endif
+ 
+ 
+-void dhcps_nats_publish(void)
++int dhcps_nats_publish(void)
+ {
+ //    if (s == NATS_OK)
+ //        s = natsStatistics_Create(&stats);
+@@ -122,8 +122,15 @@ void dhcps_nats_publish(void)
+             (const char*)natsMsg_GetSubject(msg),
+             (const char*)natsMsg_GetReply(msg),
+             (const char*)natsMsg_GetData(msg));
++        if ((strcmp(natsMsg_GetData(msg), "OK")) == 0) {
++            return 0;
++        } else {
++            printf("Response not OK !!!!! \n");
++            return -1;
++        }
+     } else {
+         printf("MSG is NULL!!!");
++        return -1;
+     }
+ 
+     if (start == 0)
+@@ -148,9 +155,10 @@ void dhcps_nats_publish(void)
+     {
+         printf("Error: %d - %s\n", s, natsStatus_GetText(s));
+         nats_PrintLastErrorStack(stderr);
++        return -1;
+     }
+ 
+-    return;
++    return 0;
+ }
+

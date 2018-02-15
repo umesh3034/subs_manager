@@ -1,0 +1,5 @@
+#eample dockerfile for subs_manager, see kubernetes.txt in root directory for more details
+FROM ubuntu
+MAINTAINER umesh3034@gmail.com
+COPY subs_manager_rest /bin/
+CMD /bin/subs_manager_rest AUTH 

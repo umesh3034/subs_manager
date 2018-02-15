@@ -1,0 +1,230 @@
+===IMP : go through README fix to understand how to build and run all the APPs on standalone server, before using kubernetes===
+
+===============================================================================================================================
+
+kubernetes : test using minikube, since i don't have access to GC
+
+-----------------------------------------------------------------------------------------------------------
+
+First install kubectl : https://kubernetes.io/docs/tasks/kubectl/install/
+
+curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+
+-----------------------------------------------------------------------------------------------------------
+
+install minikube next  : https://kubernetes.io/docs/getting-started-guides/minikube/
+
+==
+eumesbs@elxa4r7r022:~$ curl -Lo minikube https://storage.googleapis.com/minikube/releases/v0.17.1/minikube-linux-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100 83.3M  100 83.3M    0     0  9809k      0  0:00:08  0:00:08 --:--:-- 10.9M
+
+--> here default --vm-driver is virtualbox
+
+start minikube
+
+eumesbs@elxa4r7r022:~$ minikube start
+Starting local Kubernetes cluster...
+Starting VM...
+Downloading Minikube ISO
+ 89.24 MB / 89.24 MB [==============================================] 100.00% 0s
+SSH-ing files into VM...
+Setting up certs...
+Starting cluster components...
+Connecting to cluster...
+Setting up kubeconfig...
+Kubectl is now configured to use the cluster.
+==
+
+check also examples in above page
+
+-----------------------------------------------------------------------------------------------------------
+go to example here with mini kube 
+
+https://kubernetes.io/docs/tutorials/stateless-application/hello-minikube/
+
+
+=========================
+
+-----------------------------------------------------------------------------------------------------------
+
+example minikube run
+
+$ minikube start
+Starting local Kubernetes cluster...
+Running pre-create checks...
+Creating machine...
+Starting local Kubernetes cluster...
+
+$ kubectl run hello-minikube --image=gcr.io/google_containers/echoserver:1.4 --port=8080
+deployment "hello-minikube" created
+$ kubectl expose deployment hello-minikube --type=NodePort
+service "hello-minikube" exposed
+
+# We have now launched an echoserver pod but we have to wait until the pod is up before curling/accessing it
+# via the exposed service.
+# To check whether the pod is up and running we can use the following:
+$ kubectl get pod
+NAME                              READY     STATUS              RESTARTS   AGE
+hello-minikube-3383150820-vctvh   1/1       ContainerCreating   0          3s
+# We can see that the pod is still being created from the ContainerCreating status
+$ kubectl get pod
+NAME                              READY     STATUS    RESTARTS   AGE
+hello-minikube-3383150820-vctvh   1/1       Running   0          13s
+# We can see that the pod is now Running and we will now be able to curl it:
+$ curl $(minikube service hello-minikube --url)
+CLIENT VALUES:
+client_address=192.168.99.1
+command=GET
+real path=/
+...
+$ minikube stop
+Stopping local Kubernetes cluster...
+Stopping "minikube"...
+
+-----------------------------------------------------------------------------------------------------------
+
+steps to build and run example docker image
+-------------------------------------------
+
+run minikube 
+     minikube start
+
+eumesbs@elxa4r7r022:~/GO/bin$ pwd
+/home/eumesbs/GO/bin
+eumesbs@elxa4r7r022:~/GO/bin$ ls
+dhcplib  Dockerfile  gnatsd  hello  subs_manager
+
+vim Dockerfile:
+  1 FROM ubuntu
+  2 MAINTAINER umesh3034@gmail.com
+  3 COPY subs_manager /bin/
+  4 CMD /bin/subs_manager AUTH
+
+eumesbs@elxa4r7r022:~/GO/bin$ docker build -t subs:v1 .
+Sending build context to Docker daemon 27.47 MB
+Step 1 : FROM ubuntu
+latest: Pulling from library/ubuntu
+d54efb8db41d: Pull complete 
+f8b845f45a87: Pull complete 
+e8db7bf7c39f: Pull complete 
+9654c40e9079: Pull complete 
+6d9ef359eaaa: Pull complete 
+Digest: sha256:dd7808d8792c9841d0b460122f1acf0a2dd1f56404f8d1e56298048885e45535
+Status: Downloaded newer image for ubuntu:latest
+ ---> 0ef2e08ed3fa
+Step 2 : MAINTAINER umesh3034@gmail.com
+ ---> Running in ff4843d0add0
+ ---> f9a331ce5abf
+Removing intermediate container ff4843d0add0
+Step 3 : COPY subs_manager /bin/
+ ---> 4403660be207
+Removing intermediate container 7eb35aea1ba8
+Step 4 : CMD /bin/subs_manager AUTH
+ ---> Running in 1c166e0b31c5
+ ---> ed84b809d63a
+Removing intermediate container 1c166e0b31c5
+Successfully built ed84b809d63a
+
+
+docker images : will show the image below:
+
+eumesbs@elxa4r7r022:~/GO/bin$ docker images
+REPOSITORY                                            TAG                 IMAGE ID            CREATED             SIZE
+subs_manager                                          V1                  ed84b809d63a        2 minutes ago       137 MB
+
+-----------------------------------------------------------------------------------------------------------
+
+example full run
+
+ 1990  minikube start
+ 1998  eval $(minikube docker-env)
+ 2003  cd GO/bin/
+ 2004  docker build -t subs:v1 .
+ 2005  docker images
+ 2006  kubectl run subs --image=subs:v1
+ 2007  kubectl get deployments
+ 2008  kubectl get pods
+ 2009  kubectl config view
+ 2011  kubectl cluster-info
+ 2013  kubectl get services
+ 2014  minikube service subs
+ 2015  kubectl get pods
+ 2016  kubectl logs subs-2790890044-28mxl <== shows the errors
+ 2020  kubectl get services
+ 2021  kubectl get pods
+ 2023  kubectl delete service subs
+ 2024  kubectl delete deployment subs
+ 2025  minikube status
+ 2026  minikube  stop
+ 2027  uptime
+
+-----------------------------------------------------------------------------------------------------------
+
+Once you have deployed the containers, you can re-run the tests for demo as per README.txt..
+
+================================================================================================
+
+
+Updates on 23 NOV 2017:
+
+Gnats invoking in DEBUG mode:
+docker run --net=host -p 4222:4222 -p 8222:8222 -p 6222:6222 --name gnatsd -ti nats:latest -D -V
+
+
+subs_manager dockerfile:
+--
+1 #eample dockerfile for subs_manager, see kubernetes.txt in root directory for more details
+  2 FROM ubuntu
+  3 MAINTAINER umesh3034@gmail.com
+  4 COPY subs_manager /bin/
+  5 CMD /bin/subs_manager AUTH
+--
+ docker build -t subs_manager:v1 .
+
+Invoking subs_manager
+docker run --net=host --name=subs_manager subs_manager:v1
+
+dhcpd docker fiel:
+--
+  1 #example dockerfile for dhcpd
+  2 FROM ubuntu
+  3 MAINTAINER umesh3034@gmail.com
+  4 COPY dhcpd /bin/
+  5 COPY dhcpd.conf /etc/
+  6 COPY dhcpd.leases /var/db/
+  7 VOLUME ['/etc/', '/etc/'] ['/var/db', '/var/db']
+  8 EXPOSE 67/udp 67/tcp
+  9 CMD /bin/dhcpd -cf /etc/dhcpd.conf -lf /var/db/dhcpd.leases
+--
+
+ docker build -t iscdhcp:v1 .
+
+Invoking dhcpd
+docker run --net=host --name=iscdhcp iscdhcp:v1
+
+
+Kill all the docker processes: docker rm -f $(docker ps -a -q)
+
+===================================================================================================
+
+docker run -d --restart=always -e DOMAIN=cluster --name nginx-app -p 80:80 nginx
+
+kubectl run --image=nginx nginx-app --port=80 --env="DOMAIN=cluster"
+kubectl expose deployment nginx-app --port=80 --name=nginx-http
+
+
+docker run --net=host --name=subs_manager subs_manager:v1
+kubectl run --image=subs_manager:v1 subs_manager --port=80 --env="DOMAIN=cluster"
+
+docker run --net=host --name=iscdhcp iscdhcp:v1
+docker run --net=host -p 4222:4222 -p 8222:8222 -p 6222:6222 --name gnatsd -ti nats:latest -D -V
+
+
+
+
+
+
+
+

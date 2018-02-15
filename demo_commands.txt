@@ -1,0 +1,46 @@
+Radius server: running as a service
+sudo freeradius -fxxX
+
+USECASE 1:
+
+portainer:
+docker run --rm -d -p 9000:9000 -v /var/run/docker.sock:/var/run/docker.sock portainer/portainer
+
+NATs server:
+docker run --rm --net=host -p 4222:4222 -p 8222:8222 -p 6222:6222 --name gnatsd -ti nats:latest -D -V
+
+DHCP server:
+docker build -t iscdhcp:v1 .
+docker run --rm --net=host --name=iscdhcp iscdhcp:v1
+
+subs_manager:
+docker build -t subs_manager:v1 .
+docker run --rm --net=host --name=subs_manager subs_manager:v1
+
+SCAPY tool : DHCP client:
+sudo ./DHCP.py -c -v99 wlan0
+
+
+USECASE 2:
+
+portainer:
+docker run --rm -d -p 9000:9000 -v /var/run/docker.sock:/var/run/docker.sock portainer/portainer
+
+NATs server:
+docker run --rm --net=host -p 4222:4222 -p 8222:8222 -p 6222:6222 --name gnatsd -ti nats:latest -D -V
+
+DHCP server:
+docker build -t iscdhcp:v1 .
+docker run --rm --net=host --name=iscdhcp iscdhcp:v1
+
+subs_manager_rest:
+docker build -t subs_manager_rest:v1 .
+docker run --rm --net=host --name=subs_manager_rest subs_manager_rest:v1
+
+rest_server_radclient:
+docker build -t rest_server_radclient:v1 .
+docker run --rm --net=host --name=rest_server_radclient rest_server_radclient:v1
+
+SCAPY tool : DHCP client:
+sudo ./DHCP.py -c -v99 wlan0
+
